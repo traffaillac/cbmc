@@ -38,10 +38,29 @@ endif
   CP_CFLAGS = -MMD -MP
   CXXFLAGS ?= -Wall -O2
 ifeq ($(filter-out OSX OSX_Universal,$(BUILD_ENV_)),)
-  CP_CXXFLAGS += -MMD -MP -mmacosx-version-min=10.15 -std=c++17 -stdlib=libc++
-  CP_CFLAGS += -mmacosx-version-min=10.15
-  LINKFLAGS += -mmacosx-version-min=10.15 -stdlib=libc++
-  LINKNATIVE += -mmacosx-version-min=10.15 -stdlib=libc++
+  # Oldest macOS release to target. 10.15 is preferred (needed for
+  # std::filesystem), but libc++ from LLVM 19 onwards only supports 11.0 and
+  # later. Use the oldest release the toolchain accepts, or the toolchain
+  # default (the host's macOS release) if none is. Set
+  # MACOSX_DEPLOYMENT_TARGET to override.
+  ifndef MACOSX_DEPLOYMENT_TARGET
+    hash := \#
+    osx_probe_cxx := $(if $(filter default,$(origin CXX)),clang++,$(CXX))
+    MACOSX_DEPLOYMENT_TARGET := $(shell for v in 10.15 11.0; do \
+      printf '$(hash)include <cstddef>\n' | \
+      $(osx_probe_cxx) -x c++ -std=c++17 -stdlib=libc++ \
+        -mmacosx-version-min=$$v -Werror -fsyntax-only - >/dev/null 2>&1 && \
+      { echo $$v; break; }; done)
+    ifneq ($(MACOSX_DEPLOYMENT_TARGET),)
+      # avoid re-running the probe in sub-makes
+      export MACOSX_DEPLOYMENT_TARGET
+    endif
+  endif
+  OSX_VERSION_MIN = $(if $(MACOSX_DEPLOYMENT_TARGET),-mmacosx-version-min=$(MACOSX_DEPLOYMENT_TARGET))
+  CP_CXXFLAGS += -MMD -MP $(OSX_VERSION_MIN) -std=c++17 -stdlib=libc++
+  CP_CFLAGS += $(OSX_VERSION_MIN)
+  LINKFLAGS += $(OSX_VERSION_MIN) -stdlib=libc++
+  LINKNATIVE += $(OSX_VERSION_MIN) -stdlib=libc++
 else
   CP_CXXFLAGS += -MMD -MP -std=c++17
 endif
