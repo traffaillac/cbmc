@@ -4296,6 +4296,19 @@ void c_typecheck_baset::typecheck_expr_shifts(shift_exprt &expr)
   const typet o_type0 = op0.type();
   const typet o_type1 = op1.type();
 
+  // For vector shifts, resolve the generic 'shr' into a logical or
+  // arithmetic shift depending on the element type, as remove_vector and the
+  // back-ends only know about ID_lshr and ID_ashr.
+  auto resolve_vector_shr = [&expr](const typet &vector_type) {
+    if(expr.id() != ID_shr)
+      return;
+    const typet &element_type = to_vector_type(vector_type).element_type();
+    if(element_type.id() == ID_unsignedbv)
+      expr.id(ID_lshr);
+    else if(element_type.id() == ID_signedbv)
+      expr.id(ID_ashr);
+  };
+
   if(o_type0.id()==ID_vector &&
      o_type1.id()==ID_vector)
   {
@@ -4308,6 +4321,7 @@ void c_typecheck_baset::typecheck_expr_shifts(shift_exprt &expr)
       // {a0 >> b0, a1 >> b1, ..., an >> bn}
       // Fairly strict typing rules, no promotion
       expr.type()=op0.type();
+      resolve_vector_shr(o_type0);
       return;
     }
   }
@@ -4319,6 +4333,7 @@ void c_typecheck_baset::typecheck_expr_shifts(shift_exprt &expr)
     // {a0, a1, ..., an} >> b == {a0 >> b, a1 >> b, ..., an >> b}
     op1 = typecast_exprt(op1, o_type0);
     expr.type()=op0.type();
+    resolve_vector_shr(o_type0);
     return;
   }
 
