@@ -125,11 +125,13 @@ static void remove_vector(exprt &expr)
   {
     source_locationt source_location = expr.source_location();
     exprt result = make_byte_extract(
-      to_typecast_expr(expr).op(), from_integer(0, c_index_type()), expr.type());
+      to_typecast_expr(expr).op(),
+      from_integer(0, c_index_type()),
+      expr.type());
     expr.swap(result);
     expr.add_source_location() = std::move(source_location);
   }
-  else if(expr.type().id()==ID_vector)
+  else if(expr.type().id() == ID_vector)
   {
     if(
       expr.id() == ID_plus || expr.id() == ID_minus || expr.id() == ID_mult ||
