@@ -1,0 +1,11 @@
+CORE
+main.c
+
+^EXIT=0$
+^SIGNAL=0$
+^VERIFICATION SUCCESSFUL$
+--
+^warning: ignoring
+--
+Right shifts of vectors must be resolved to logical or arithmetic shifts, and
+casts from a vector to a same-size scalar must be bit-wise reinterpretations.
